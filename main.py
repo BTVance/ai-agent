@@ -1,5 +1,7 @@
+import sys
 import os
 import argparse
+from config import MAX_ITERS
 from dotenv import load_dotenv 
 from google import genai
 from google.genai import types
@@ -24,7 +26,7 @@ def main():
     messages = [types.Content(role="user", parts=[types.Part(text=args.user_prompt)])]
     
     
-    for _  in range(20):
+    for _  in range(MAX_ITERS):
         response = client.models.generate_content(
             model="gemini-2.5-flash", 
             contents=messages,
@@ -41,6 +43,10 @@ def main():
             print("User prompt:", args.user_prompt)
             print("Prompt tokens:", response.usage_metadata.prompt_token_count)
             print("Response tokens:", response.usage_metadata.candidates_token_count)
+        if response.candidates:
+            for c in response.candidates:
+                if c.content: 
+                    messages.append(c.content)
 
         function_calls = response.function_calls
 
@@ -60,13 +66,15 @@ def main():
         
                 function_responses.append(result.parts[0])
             messages.append(types.Content(role="user", parts=function_responses))
-            if not function_calls:
-                print(response.text)
-                break
-                    
-
         else:
             print(response.text)
+            return
+        
+    
+    print("maximum number of iterations reached without a final response")
+    sys.exit(1)
+            
+                    
 
 if __name__ == "__main__":
     main()
